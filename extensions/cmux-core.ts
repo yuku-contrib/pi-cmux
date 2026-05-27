@@ -1,9 +1,13 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { basename } from "node:path";
 
 const CMUX_TIMEOUT_MS = 5000;
 const SPLIT_READY_ATTEMPTS = 20;
 const SPLIT_READY_DELAY_MS = 150;
 const SURFACE_BOOT_DELAY_MS = 250;
+const TAB_TITLE_CONTEXT_TIMEOUT_MS = 1000;
+const MAX_TAB_TITLE_LENGTH = 48;
+const TAB_TITLE_SEPARATOR = " · ";
 
 export type SplitDirection = "right" | "down";
 
@@ -31,6 +35,10 @@ interface CmuxExecResult {
 	stdout: string;
 	stderr: string;
 	error?: string;
+}
+
+export interface OpenCommandInNewSplitOptions {
+	tabTitle?: string;
 }
 
 function delay(ms: number): Promise<void> {
@@ -65,6 +73,46 @@ export function buildPiCommand(cwd: string, options?: { sessionFile?: string; pr
 
 export function buildShellCommand(cwd: string, command: string): string {
 	return ["cd", shellEscape(cwd), "&&", "exec", "sh", "-lc", shellEscape(command)].join(" ");
+}
+
+function normalizeTabTitle(value: string | undefined, fallback: string): string {
+	return (value ?? "").replace(/\s+/g, " ").trim() || fallback.replace(/\s+/g, " ").trim();
+}
+
+export function formatTabTitle(value: string | undefined, fallback: string): string {
+	const title = normalizeTabTitle(value, fallback);
+	if (title.length <= MAX_TAB_TITLE_LENGTH) {
+		return title;
+	}
+	return `${title.slice(0, MAX_TAB_TITLE_LENGTH - 3).trimEnd()}...`;
+}
+
+async function getTabTitleContext(pi: ExtensionAPI, cwd: string): Promise<string> {
+	try {
+		const result = await pi.exec("git", ["rev-parse", "--show-toplevel"], {
+			cwd,
+			timeout: TAB_TITLE_CONTEXT_TIMEOUT_MS,
+		});
+		const repoRoot = result.code === 0 && !result.killed ? result.stdout.trim() : "";
+		if (repoRoot) {
+			return basename(repoRoot) || repoRoot;
+		}
+	} catch {
+		// Fall through to directory basename.
+	}
+
+	return basename(cwd) || cwd;
+}
+
+export async function buildContextualTabTitle(
+	pi: ExtensionAPI,
+	cwd: string,
+	value: string | undefined,
+	fallback: string,
+): Promise<string> {
+	const title = normalizeTabTitle(value, fallback);
+	const context = normalizeTabTitle(await getTabTitleContext(pi, cwd), "");
+	return formatTabTitle(context ? `${title}${TAB_TITLE_SEPARATOR}${context}` : title, title);
 }
 
 function collectSurfaceRefs(panes: CmuxPaneInfo[]): Set<string> {
@@ -167,10 +215,32 @@ async function waitForNewSurface(pi: ExtensionAPI, workspaceRef: string, previou
 	return undefined;
 }
 
+async function renameSurfaceTab(pi: ExtensionAPI, workspaceRef: string, surfaceRef: string, title: string | undefined): Promise<void> {
+	const tabTitle = formatTabTitle(title, "");
+	if (!tabTitle) {
+		return;
+	}
+
+	try {
+		await execCmux(pi, [
+			"rename-tab",
+			"--workspace",
+			workspaceRef,
+			"--surface",
+			surfaceRef,
+			"--title",
+			tabTitle,
+		]);
+	} catch {
+		// Tab naming is best-effort; the spawned split is still useful if rename fails.
+	}
+}
+
 export async function openCommandInNewSplit(
 	pi: ExtensionAPI,
 	direction: SplitDirection,
 	command: string,
+	options: OpenCommandInNewSplitOptions = {},
 ): Promise<{ ok: true } | { ok: false; error: string }> {
 	const callerResult = await getCallerInfo(pi);
 	if (!callerResult.ok) {
@@ -214,6 +284,8 @@ export async function openCommandInNewSplit(
 	if (!respawnResult.ok) {
 		return { ok: false, error: respawnResult.error || "Failed to start pi in the new split" };
 	}
+
+	await renameSurfaceTab(pi, workspaceRef, newSurfaceRef, options.tabTitle);
 
 	return { ok: true };
 }

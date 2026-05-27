@@ -50,6 +50,10 @@ PI_CMUX_SIDEBAR_PROGRESS=0           # disable progress bar updates
 PI_CMUX_SIDEBAR_STATUS_KEY=my-key    # override status key
 ```
 
+## Split tab names
+
+Commands that spawn a split rename the new cmux tab/surface as `<title> · <repo-or-dir>`, using the git repo basename when available and the working-directory basename otherwise. Examples: `Pi · pi-cmux`, `Review · pi-cmux`, `Continue · fix-sidebar`, `lazygit · pi-cmux`.
+
 ## Split Pi sessions
 
 ```text
@@ -150,14 +154,6 @@ Worktree continuation starts a new session in the target worktree and seeds it w
 
 ## Review workflows
 
-In-place prompt templates:
-
-```text
-/review <target>
-/review-diff [focus-or-pr-url]
-/skill:code-review
-```
-
 Split review commands:
 
 ```text
@@ -173,6 +169,7 @@ Split review commands:
 - `/cmrh` opens a review split below.
 - With no arguments, both default to reviewing the current git diff.
 - A GitHub PR URL switches the prompt to PR review and asks Pi to inspect it with `gh pr view` and `gh pr diff`.
+- If another Pi package provides `code-review`, the generated prompt asks Pi to use it when available.
 
 Examples:
 
@@ -190,6 +187,8 @@ Examples:
 Legacy aliases:
 - `/review-v` → `/cmrv`
 - `/review-h` → `/cmrh`
+
+`pi-cmux` does not ship generic in-place `/review`, `/review-diff`, or `code-review` resources. Use those from another package if installed.
 
 ## Environment variables
 

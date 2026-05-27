@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-05-27
+
+### Added
+
+- Renamed cmux tabs/surfaces spawned by split, tool, zoxide, continuation, and review commands with `<title> · <repo-or-dir>` contextual titles.
+
+### Changed
+
+- Updated split review prompts to use `code-review` only when another package provides it.
+
+### Removed
+
+- Stopped shipping the generic `code-review` skill and `/review` / `/review-diff` prompts to avoid conflicts with other Pi packages.
+
 ## [0.1.11] - 2026-05-27
 
 ### Added

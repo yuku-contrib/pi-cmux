@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
+import { buildContextualTabTitle, buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
 
 type ReviewMode = "general" | "bugs" | "refactor" | "tests" | "diff";
 
@@ -57,7 +57,7 @@ function getGitHubPullRequestUrl(value: string | undefined): string | undefined 
 
 function buildReviewPrompt(request: ReviewRequest): string {
 	const commonInstructions = [
-		"Use the bundled code-review skill if it is available.",
+		"Use the code-review skill if it is available.",
 		"Start with a concise summary ordered by severity.",
 		"Then list concrete findings with suggested fixes and any missing tests.",
 		"Do not edit files unless asked.",
@@ -90,7 +90,9 @@ async function openReviewSplit(
 	direction: SplitDirection,
 	request: ReviewRequest,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-	return openCommandInNewSplit(pi, direction, buildPiCommand(ctx.cwd, { prompt: buildReviewPrompt(request) }));
+	return openCommandInNewSplit(pi, direction, buildPiCommand(ctx.cwd, { prompt: buildReviewPrompt(request) }), {
+		tabTitle: await buildContextualTabTitle(pi, ctx.cwd, "Review", "Review"),
+	});
 }
 
 function registerReviewCommand(

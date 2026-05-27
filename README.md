@@ -10,7 +10,7 @@ Pi package with [cmux](https://www.cmux.dev)-powered terminal integrations for [
 
 ## What it adds
 
-`pi-cmux` keeps Pi terminal-native by delegating notifications, sidebar status, pane splits, directory jumps, review handoff, and continuation workflows to cmux.
+`pi-cmux` keeps Pi terminal-native by delegating notifications, sidebar status, pane splits, tab naming, directory jumps, review handoff, and continuation workflows to cmux.
 
 ## Install
 
@@ -41,7 +41,6 @@ If Pi is already running:
 | Jump directory | `/cmz <query>`, `/cmzh <query>` | Resolves a zoxide match or path, then opens Pi there. |
 | Continue task | `/cmcv [note]`, `/cmch [note]` | Opens a related handoff session in a split. |
 | Continue in worktree | `/cmcv -c <branch> [--from <ref>] [note]` | Creates a branch worktree and starts Pi there with handoff context. |
-| Review in place | `/review <target>`, `/review-diff [focus-or-pr-url]` | Expands bundled review prompt templates. |
 | Review in split | `/cmrv [flags] [target]`, `/cmrh [flags] [target]` | Starts a focused review session in a split. |
 
 Detailed command examples: [docs/usage.md](docs/usage.md).
@@ -76,4 +75,4 @@ cmux workspace/surface targeting uses `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` 
 
 Extensions: `cmux-notify`, `cmux-sidebar`, `cmux-split`, `cmux-open`, `cmux-zoxide`, `cmux-review`, `cmux-continue`.
 
-Other resources: `code-review` skill, `/review` prompt, `/review-diff` prompt.
+`pi-cmux` intentionally does not bundle generic review skills or prompt templates, so packages that provide `/review`, `/review-diff`, or `code-review` can own those names without conflicts.

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SessionManager, type ExtensionAPI, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import {
+	buildContextualTabTitle,
 	buildPiCommand,
 	openCommandInNewSplit,
 	type SplitDirection,
@@ -401,6 +402,7 @@ async function openContinueSplit(
 			sessionFile: handoffTarget.target.sessionFile,
 			prompt: handoffTarget.target.prompt,
 		}),
+		{ tabTitle: await buildContextualTabTitle(pi, handoffTarget.target.cwd, "Continue", "Continue") },
 	);
 }
 

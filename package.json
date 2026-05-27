@@ -1,6 +1,6 @@
 {
   "name": "pi-cmux",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Pi package with cmux-powered terminal integrations",
   "author": "Javi Molina",
   "license": "MIT",
@@ -30,8 +30,6 @@
   },
   "files": [
     "extensions/",
-    "skills/",
-    "prompts/",
     "docs/",
     "install.mjs",
     "README.md",
@@ -43,12 +41,6 @@
   "pi": {
     "extensions": [
       "./extensions/index.ts"
-    ],
-    "skills": [
-      "./skills"
-    ],
-    "prompts": [
-      "./prompts"
     ]
   },
   "peerDependencies": {

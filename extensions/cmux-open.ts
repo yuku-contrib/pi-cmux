@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { buildShellCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
+import { buildContextualTabTitle, buildShellCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
 import { onI18nLocaleChanged, t, type I18nKey } from "./i18n.ts";
 
 async function openToolInSplit(
@@ -8,7 +8,10 @@ async function openToolInSplit(
 	direction: SplitDirection,
 	args: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-	return openCommandInNewSplit(pi, direction, buildShellCommand(ctx.cwd, args.trim()));
+	const command = args.trim();
+	return openCommandInNewSplit(pi, direction, buildShellCommand(ctx.cwd, command), {
+		tabTitle: await buildContextualTabTitle(pi, ctx.cwd, command, "Tool"),
+	});
 }
 
 function registerOpenCommand(

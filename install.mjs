@@ -13,7 +13,7 @@ const PACKAGE_DIR = path.join(AGENT_DIR, "packages", PACKAGE_NAME);
 const PACKAGE_SETTINGS_ENTRY = `./packages/${PACKAGE_NAME}`;
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const FILES_TO_COPY = ["package.json", "README.md", "CHANGELOG.md"];
-const DIRECTORIES_TO_COPY = ["extensions", "skills", "prompts", "docs"];
+const DIRECTORIES_TO_COPY = ["extensions", "docs"];
 
 const args = process.argv.slice(2);
 const isRemove = args.includes("--remove") || args.includes("-r");

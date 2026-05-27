@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
+import { buildContextualTabTitle, buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./cmux-core.ts";
 
 async function openPiInSplit(
 	pi: ExtensionAPI,
@@ -7,10 +7,12 @@ async function openPiInSplit(
 	direction: SplitDirection,
 	args: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+	const prompt = args.trim();
 	return openCommandInNewSplit(
 		pi,
 		direction,
-		buildPiCommand(ctx.cwd, { prompt: args.trim().length > 0 ? args : undefined }),
+		buildPiCommand(ctx.cwd, { prompt: prompt.length > 0 ? prompt : undefined }),
+		{ tabTitle: await buildContextualTabTitle(pi, ctx.cwd, prompt, "Pi") },
 	);
 }
 
