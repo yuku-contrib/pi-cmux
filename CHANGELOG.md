@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-05-27
+
+### Added
+
+- Added `cmux-sidebar` to update cmux sidebar status, progress, logs, and flash indicators during Pi runs.
+
+### Changed
+
+- Condensed the README and moved detailed command examples to `docs/usage.md`.
+
+### Fixed
+
+- Prevented sidebar progress-clear timers from keeping one-shot Pi runs alive.
+- Kept sidebar cleanup commands running after optional cmux command failures such as unsupported `trigger-flash`.
+
+## [0.1.10 and earlier]
+
 ### Added
 
 - Initial release with the `cmux-notify` extension for cmux-backed pi notifications.

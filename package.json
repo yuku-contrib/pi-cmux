@@ -1,6 +1,6 @@
 {
   "name": "pi-cmux",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Pi package with cmux-powered terminal integrations",
   "author": "Javi Molina",
   "license": "MIT",
@@ -28,6 +28,7 @@
     "extensions/",
     "skills/",
     "prompts/",
+    "docs/",
     "install.mjs",
     "README.md",
     "CHANGELOG.md"
