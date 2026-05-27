@@ -10,7 +10,7 @@ Pi package with [cmux](https://www.cmux.dev)-powered terminal integrations for [
 
 ## What it adds
 
-`pi-cmux` keeps Pi terminal-native by delegating notifications, sidebar status, pane splits, tab naming, directory jumps, review handoff, and continuation workflows to cmux.
+`pi-cmux` keeps Pi terminal-native by delegating notifications, sidebar status, pane splits, tab naming, pluggable tool commands, directory jumps, review handoff, and continuation workflows to cmux.
 
 ## Install
 
@@ -38,6 +38,7 @@ If Pi is already running:
 | Sidebar status/log | automatic | Updates cmux status, progress, logs, and surface flash while Pi runs. |
 | Split Pi | `/cmv [prompt]`, `/cmh [prompt]` | Opens a new right/lower split with Pi in the same project. |
 | Run a tool | `/cmo <cmd>`, `/cmoh <cmd>` | Opens a split and runs a shell command in the same project. |
+| Pluggable tools | custom `/<name>` | Registers cmux split shortcuts from `pi-cmux.commands` settings. |
 | Jump directory | `/cmz <query>`, `/cmzh <query>` | Resolves a zoxide match or path, then opens Pi there. |
 | Continue task | `/cmcv [note]`, `/cmch [note]` | Opens a related handoff session in a split. |
 | Continue in worktree | `/cmcv -c <branch> [--from <ref>] [note]` | Creates a branch worktree and starts Pi there with handoff context. |
@@ -70,6 +71,26 @@ Detailed command examples: [docs/usage.md](docs/usage.md).
 | `PI_CMUX_SIDEBAR_TOKENS` | `1` | Include compact live cumulative session token counts in sidebar progress and summaries. |
 | `PI_CMUX_SIDEBAR_COST` | `0` | Include reported model cost alongside token counts. |
 | `PI_CMUX_SIDEBAR_LOG_TOOLS` | `0` | Set `1` to log every tool result. |
+
+Custom split shortcuts can be registered under `pi-cmux.commands` in `~/.pi/agent/settings.json` or `.pi/settings.json`; see [docs/usage.md](docs/usage.md#pluggable-tool-commands).
+
+Example Hunk review shortcut:
+
+```json
+{
+  "pi-cmux": {
+    "commands": {
+      "ck": {
+        "run": "hunk diff --agent-notes --watch",
+        "acceptArgs": true,
+        "description": "Open Hunk diff with agent notes in a cmux split"
+      }
+    }
+  }
+}
+```
+
+Use `/ck` to open Hunk in a cmux split, add Hunk comments while reviewing, then ask Pi to read them.
 
 cmux workspace/surface targeting uses `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` automatically. Sidebar integration only activates inside a cmux workspace.
 

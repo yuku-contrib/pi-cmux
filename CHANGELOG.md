@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-05-27
+
+### Added
+
+- Added pluggable cmux split commands via `pi-cmux.commands` in Pi settings, with shorthand entries, argument forwarding, configurable split direction, and project-local overrides.
+
+### Changed
+
+- Documented tool workflows as generic/pluggable commands instead of app-specific shortcuts.
+
 ## [0.1.14] - 2026-05-27
 
 ### Fixed

@@ -55,7 +55,7 @@ PI_CMUX_SIDEBAR_STATUS_KEY=my-key    # override status key
 
 ## Split tab names
 
-Commands that spawn a split rename the new cmux tab/surface as `<title> · <repo-or-dir>`, using the git repo basename when available and the working-directory basename otherwise. Examples: `Pi · pi-cmux`, `Review · pi-cmux`, `Continue · fix-sidebar`, `lazygit · pi-cmux`.
+Commands that spawn a split rename the new cmux tab/surface as `<title> · <repo-or-dir>`, using the git repo basename when available and the working-directory basename otherwise. Examples: `Pi · pi-cmux`, `Review · pi-cmux`, `Continue · fix-sidebar`, `npm test · pi-cmux`.
 
 ## Split Pi sessions
 
@@ -95,7 +95,6 @@ Examples:
 
 ```text
 /cmo hx
-/cmo lazygit
 /cmo npm test
 /cmoh npm run dev
 /cmo watch -n 1 git status --short
@@ -103,6 +102,79 @@ Examples:
 
 Alias:
 - `/cmov` → `/cmo`
+
+## Pluggable tool commands
+
+Register custom split shortcuts in Pi settings under `pi-cmux.commands`.
+
+Supported locations:
+- `~/.pi/agent/settings.json` for global commands
+- `.pi/settings.json` for project-local commands
+
+Simple form:
+
+```json
+{
+  "pi-cmux": {
+    "commands": {
+      "edit": "hx",
+      "logs": "tail -f logs/app.log"
+    }
+  }
+}
+```
+
+Each configured command opens a right cmux split by default and runs via `sh -lc` in the current project directory.
+
+Examples:
+
+```text
+/edit
+/logs
+```
+
+Use object form for arguments, lower splits, custom tab titles, or descriptions:
+
+```json
+{
+  "pi-cmux": {
+    "commands": {
+      "edit": {
+        "run": "hx",
+        "acceptArgs": true,
+        "description": "Open Helix in a cmux split"
+      },
+      "dev": {
+        "run": "npm run dev",
+        "direction": "down",
+        "title": "dev",
+        "description": "Run the dev server below"
+      }
+    }
+  }
+}
+```
+
+Then use:
+
+```text
+/edit src/auth.ts
+/dev
+```
+
+Supported object keys:
+- `run` — shell command to execute
+- `acceptArgs` — append slash-command arguments to `run` when set to `true`
+- `direction` — `right` or `down`; defaults to `right`
+- `title` — optional base tab title before ` · <repo-or-dir>` is appended
+- `description` — optional slash-command description
+- `disabled` — set to `true` in project settings to remove a global configured command
+
+Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they cannot replace `pi-cmux` commands such as `/cmv`, `/cmo`, `/cmz`, `/cmrv`, or `/cmcv`.
+
+If the same command exists in both global and project settings, the project setting wins. After changing settings, run `/reload` in Pi.
+
+No app-specific shortcuts are bundled by default; define the tools you want as configured commands.
 
 ## Zoxide directory jumps
 
