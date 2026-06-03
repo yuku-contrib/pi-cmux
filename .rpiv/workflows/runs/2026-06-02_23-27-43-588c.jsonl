@@ -1,0 +1,2 @@
+{"runId":"2026-06-02_23-27-43-588c","workflow":"build","input":"ツール実行時に、sidebarを更新するだけじゃなく、notify も出すようにしたい。どのツール名のときに通知するかはconfigで設定できるようにする。","ts":"2026-06-02T14:27:43.016Z","trigger":{"kind":"command","name":"wf"}}
+{"stageNumber":1,"stage":"research","skill":"research","status":"failed","ts":"2026-06-02T14:32:36.447Z","errMsg":"research finished without producing a path matching \\.rpiv\\/artifacts\\/research\\/[\\w.-]+\\.md"}

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added opt-in tool-start notifications via `pi-cmux.notify.tools` in global or project Pi settings.
+
 ## [0.1.16] - 2026-05-27
 
 ### Added

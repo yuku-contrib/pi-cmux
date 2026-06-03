@@ -73,7 +73,24 @@ Detailed command examples: [docs/usage.md](docs/usage.md).
 | `PI_CMUX_SIDEBAR_COST` | `0` | Include reported model cost alongside token counts. |
 | `PI_CMUX_SIDEBAR_LOG_TOOLS` | `0` | Set `1` to log every tool result. |
 
-Custom split shortcuts can be registered under `pi-cmux.commands` in `~/.pi/agent/settings.json` or `.pi/settings.json`; see [docs/usage.md](docs/usage.md#pluggable-tool-commands).
+Custom split shortcuts can be registered under `pi-cmux.commands`, and tool-start notifications can be enabled under `pi-cmux.notify.tools`, in `~/.pi/agent/settings.json` or `.pi/settings.json`; see [docs/usage.md](docs/usage.md#pluggable-tool-commands) and [tool notification settings](docs/usage.md#tool-notification-settings).
+
+Example tool notification settings:
+
+```json
+{
+  "pi-cmux": {
+    "notify": {
+      "tools": {
+        "bash": true,
+        "cmux_open_terminal": true
+      }
+    }
+  }
+}
+```
+
+Configured tools send `cmux notify` when they start. `PI_CMUX_NOTIFY_LEVEL=disabled` disables both final-run and tool-start notifications.
 
 Example Hunk review shortcut:
 
