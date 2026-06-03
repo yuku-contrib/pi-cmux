@@ -82,8 +82,7 @@ Example tool notification settings:
   "pi-cmux": {
     "notify": {
       "tools": {
-        "bash": true,
-        "cmux_open_terminal": true
+        "ask_user_question": true
       }
     }
   }
