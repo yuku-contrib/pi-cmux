@@ -49,7 +49,7 @@ Supported locations:
 - `~/.pi/agent/settings.json` for global tool notifications
 - `.pi/settings.json` for project-local tool notifications
 
-When a configured tool starts, `cmux-notify` sends a notification with subtitle `Tool: <name>` and a short body such as `Using ask_user_question` or `Using read on README.md`. Tool-start notifications use the same `cmux notify` title, debounce, timeout, and cmux-unavailable handling as final-run notifications. `PI_CMUX_NOTIFY_LEVEL=disabled` disables both final-run notifications and configured tool-start notifications.
+When a configured tool starts, `cmux-notify` sends a notification. `PI_CMUX_NOTIFY_LEVEL=disabled` disables both final-run notifications and configured tool-start notifications.
 
 Project settings load after global settings. Set a project entry to `{ "disabled": true }` to remove a global tool notification:
 
