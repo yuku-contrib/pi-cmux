@@ -29,6 +29,45 @@ PI_CMUX_NOTIFY_LEVEL=low       # Error only
 PI_CMUX_NOTIFY_LEVEL=disabled  # off
 ```
 
+### Tool notification settings
+
+Tool-start notifications are opt-in. Configure exact Pi tool names under `pi-cmux.notify.tools`:
+
+```json
+{
+  "pi-cmux": {
+    "notify": {
+      "tools": {
+        "ask_user_question": true
+      }
+    }
+  }
+}
+```
+
+Supported locations:
+- `~/.pi/agent/settings.json` for global tool notifications
+- `.pi/settings.json` for project-local tool notifications
+
+When a configured tool starts, `cmux-notify` sends a notification. `PI_CMUX_NOTIFY_LEVEL=disabled` disables both final-run notifications and configured tool-start notifications.
+
+Project settings load after global settings. Set a project entry to `{ "disabled": true }` to remove a global tool notification:
+
+```json
+{
+  "pi-cmux": {
+    "notify": {
+      "tools": {
+        "ask_user_question": { "disabled": true },
+        "read": true
+      }
+    }
+  }
+}
+```
+
+After changing settings, run `/reload` in Pi.
+
 ## Sidebar status/log
 
 `cmux-sidebar` updates the cmux right sidebar while Pi runs. It only activates inside a cmux workspace (`CMUX_WORKSPACE_ID` is present).
