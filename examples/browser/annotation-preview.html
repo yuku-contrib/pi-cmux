@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pi · Browser annotation preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f6f7f9; color: #222631; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  button { font: inherit; cursor: pointer; }
+  .shell { max-width: 1100px; margin: auto; padding: 0 32px 80px; }
+  header { display: flex; align-items: center; justify-content: space-between; height: 76px; border-bottom: 1px solid #e3e5e9; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 650; letter-spacing: -.5px; }
+  .brand-icon { display: grid; place-items: center; background: #252a37; color: white; width: 28px; height: 28px; border-radius: 8px; font-size: 17px; }
+  .demo { color: #858b98; font: 10px ui-monospace, monospace; letter-spacing: 1.1px; }
+  nav { display: flex; gap: 23px; padding: 22px 0; color: #8b909b; font-size: 12px; }
+  nav .active { color: #333946; font-weight: 600; }
+  .intro { margin: 20px 0 25px; }
+  .eyebrow { color: #9297a1; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
+  h1 { margin: 6px 0; font-size: 30px; font-weight: 600; letter-spacing: -1.2px; }
+  .intro p { margin: 0; color: #878d99; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { border: 1px solid #e3e6eb; border-radius: 12px; padding: 21px; background: #fff; }
+  .metric-label { color: #818793; font-size: 12px; margin-bottom: 10px; }
+  .metric-value { font-size: 32px; font-weight: 550; letter-spacing: -1.2px; }
+  .metric-change { margin-top: 10px; color: #338267; font-size: 11px; }
+  .metric-change span { color: #9ba0a9; margin-left: 5px; }
+  .chart { margin-top: 18px; }
+  .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; font-weight: 550; }
+  .period { color: #9499a3; font-weight: 400; font-size: 11px; }
+  svg { width: 100%; height: 145px; display: block; }
+  .axis { display: flex; justify-content: space-between; color: #a5aab4; font-size: 10px; }
+  .activity { margin-top: 20px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid #f0f1f4; font-size: 12px; }
+  .row span:last-child { color: #959ba6; font-size: 11px; }
+  @media (max-width: 500px) { .shell { padding: 0 20px 80px; } header { height: 62px; } .card { padding: 16px; } .metric-value { font-size: 27px; } .stats { gap: 12px; } .demo { font-size: 8px; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header><div class="brand"><span class="brand-icon">n</span> northstar</div><span class="demo">SAMPLE PAGE / LOCAL ONLY</span></header>
+  <nav aria-label="Sample navigation"><span class="active">Overview</span><span>Customers</span><span>Reports</span></nav>
+  <section class="intro" data-annotate="Page heading" id="heading">
+    <div class="eyebrow">Your workspace</div><h1>A little more momentum.</h1><p>Here's how things are looking this month.</p>
+  </section>
+  <section class="stats" aria-label="Sample metrics">
+    <article class="card" id="revenue" data-annotate="Revenue card"><div class="metric-label">Monthly revenue</div><div class="metric-value">$24,680</div><div class="metric-change">↗ 12.8% <span>vs. last month</span></div></article>
+    <article class="card" id="customers" data-annotate="Customers card"><div class="metric-label">Active customers</div><div class="metric-value">1,284</div><div class="metric-change">↗ 8.2% <span>vs. last month</span></div></article>
+  </section>
+  <section class="card chart" id="chart" data-annotate="Revenue chart">
+    <div class="section-title">Revenue over time <span class="period">Last 30 days</span></div>
+    <svg viewBox="0 0 600 145" preserveAspectRatio="none" role="img" aria-label="Sample revenue trending upward">
+      <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7286aa" stop-opacity=".15"/><stop offset="100%" stop-color="#7286aa" stop-opacity="0"/></linearGradient></defs>
+      <path d="M0 30H600M0 70H600M0 110H600" stroke="#f0f2f5" fill="none"/>
+      <path d="M0 115 C35 115 35 88 70 91 S110 110 145 76 S185 92 220 65 S255 85 290 56 S320 68 350 44 S380 64 420 34 S470 54 500 25 S565 35 600 12 V145 H0Z" fill="url(#fill)"/>
+      <path d="M0 115 C35 115 35 88 70 91 S110 110 145 76 S185 92 220 65 S255 85 290 56 S320 68 350 44 S380 64 420 34 S470 54 500 25 S565 35 600 12" fill="none" stroke="#8192b2" stroke-width="2.5"/>
+    </svg>
+    <div class="axis"><span>Sep 1</span><span>Sep 10</span><span>Sep 20</span><span>Sep 30</span></div>
+  </section>
+  <section class="card activity" id="activity" data-annotate="Recent activity">
+    <div class="section-title">Recent activity</div>
+    <div class="row"><span>Studio Field upgraded to Pro</span><span>12 min ago</span></div>
+    <div class="row"><span>September report is ready</span><span>1 hour ago</span></div>
+    <div class="row"><span>New customer from the referral program</span><span>2 hours ago</span></div>
+  </section>
+</main>
+<script>
+// UI mock by default. ?live=1 leaves the sample page bare for the real /cmba overlay.
+(() => {
+  if (new URLSearchParams(location.search).get('live') === '1') return;
+  const host = document.createElement('div');
+  host.id = 'pi-annotation-preview';
+  host.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647;pointer-events:none';
+  document.documentElement.append(host);
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <style>
+      * { box-sizing: border-box; }
+      :host { color-scheme: dark; }
+      [hidden] { display: none !important; }
+      button, textarea { font: inherit; }
+      button { cursor: pointer; }
+      button:focus-visible, textarea:focus-visible { outline: 1px solid #e6b273; outline-offset: 2px; }
+      .ring { position: fixed; border: 1.5px solid #dba25b; border-radius: 13px; pointer-events: none; }
+      .note { position: fixed; width: min(290px, calc(100vw - 24px)); padding: 8px; pointer-events: auto; background: #202127; color: #eee; border: 1px solid #41434c; border-radius: 9px; box-shadow: 0 4px 16px #0002; font: 12px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      .input { display: flex; align-items: flex-start; gap: 6px; }
+      textarea { flex: 1; min-width: 0; height: 28px; max-height: 96px; padding: 4px; border: none; resize: none; background: transparent; color: #eee; line-height: 20px; }
+      textarea::placeholder { color: #a4a7b1; }
+      .close { border: 0; background: none; color: #a4a7b1; width: 24px; height: 26px; font-size: 17px; }
+      .footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 5px; }
+      .status { color: #a4a7b1; font-size: 10px; padding-left: 4px; }
+      .send { border: 0; border-radius: 5px; background: #e6b273; color: #332619; padding: 3px 9px; font-size: 11px; }
+      .send:disabled { opacity: .4; cursor: default; }
+      .launcher { position: fixed; bottom: 16px; right: 16px; display: flex; align-items: center; gap: 9px; pointer-events: auto; background: #202127; color: #eee; border: 1px solid #41434c; border-radius: 7px; padding: 7px 10px; font: 12px -apple-system, sans-serif; }
+      .launcher::after { content: ''; width: 26px; height: 14px; border-radius: 8px; background: radial-gradient(circle at 7px 7px, #d1d3dc 4px, transparent 5px), #4b4e59; }
+      .launcher[aria-checked="true"]::after { background: radial-gradient(circle at 19px 7px, #30271e 4px, transparent 5px), #e6b273; }
+    </style>
+    <div class="ring"></div>
+    <section class="note" aria-label="Annotation">
+      <div class="input"><textarea rows="1" maxlength="4000" aria-label="Annotation text" placeholder="Write a note…"></textarea><button class="close" aria-label="Close note" title="Close · Esc">×</button></div>
+      <div class="footer"><span class="status" role="status">Preview only</span><button class="send" title="Preview send · ⌘ / Ctrl + Enter" disabled>Send ↑</button></div>
+    </section>
+    <button class="launcher" role="switch" aria-label="Annotate" aria-checked="false">Annotate</button>
+  `;
+  const $ = selector => root.querySelector(selector);
+  const note = $('.note');
+  const text = $('textarea');
+  const drafts = new WeakMap();
+  let selected = document.querySelector('#revenue');
+  let active = false;
+
+  function layout() {
+    const rect = selected.getBoundingClientRect();
+    const visible = active && rect.bottom > 0 && rect.top < innerHeight;
+    $('.ring').hidden = note.hidden = !visible;
+    $('.launcher').setAttribute('aria-checked', String(active));
+    if (!visible) return;
+    Object.assign($('.ring').style, { top: `${rect.top - 3}px`, left: `${rect.left - 3}px`, width: `${rect.width + 6}px`, height: `${rect.height + 6}px` });
+    const left = Math.max(12, Math.min(rect.left, innerWidth - note.offsetWidth - 12));
+    const below = rect.bottom + 9;
+    const top = below + note.offsetHeight <= innerHeight - 60 ? below : rect.top - note.offsetHeight - 9;
+    note.style.left = `${left}px`;
+    note.style.top = `${Math.max(12, Math.min(top, innerHeight - note.offsetHeight - 60))}px`;
+  }
+  function update() {
+    drafts.set(selected, text.value);
+    $('.send').disabled = !text.value.trim();
+    $('.status').textContent = 'Preview only';
+    text.style.height = '28px';
+    text.style.height = `${Math.min(96, Math.max(28, text.scrollHeight))}px`;
+    layout();
+  }
+  function choose(element) {
+    selected = element;
+    note.setAttribute('aria-label', `Note on ${element.dataset.annotate}`);
+    note.dataset.target = element.id;
+    text.value = drafts.get(element) || '';
+    layout();
+    update();
+  }
+  function close() { active = false; layout(); $('.launcher').focus(); }
+  function send() { if (text.value.trim()) $('.status').textContent = 'Preview — nothing sent'; }
+  document.addEventListener('click', event => {
+    if (!active || event.composedPath().includes(host)) return;
+    const target = event.target instanceof Element ? event.target.closest('[data-annotate]') : null;
+    if (!target) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    choose(target);
+    text.focus();
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && active) { event.preventDefault(); close(); }
+  });
+  text.addEventListener('input', update);
+  text.addEventListener('keydown', event => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); send(); }
+  });
+  $('.close').addEventListener('click', close);
+  $('.send').addEventListener('click', send);
+  $('.launcher').addEventListener('click', () => {
+    if (active) { close(); return; }
+    active = true;
+    selected.scrollIntoView({ block: 'nearest' });
+    choose(selected);
+    text.focus();
+  });
+  addEventListener('resize', layout);
+  addEventListener('scroll', layout, { passive: true });
+  new ResizeObserver(layout).observe(document.querySelector('main'));
+  choose(selected);
+})();
+</script>
+</body>
+</html>

@@ -17,7 +17,7 @@ Other important files:
 
 ## How the repo works
 
-- This is a TypeScript-based Pi package, but the repo currently does not include a local TypeScript toolchain or build step.
+- This is a TypeScript-based Pi package with a local TypeScript toolchain (`npm run typecheck`) and CLI regression tests (`npm test`), but no build step.
 - Extensions are loaded from `./extensions` via the `pi.extensions` entry in `package.json`.
 - The package is published to npm and installed in Pi via `pi install npm:pi-cmux` or `npx pi-cmux`.
 
@@ -31,12 +31,12 @@ Other important files:
 ## Release / push checklist
 
 Before pushing changes:
-- bump the npm version
 - update `CHANGELOG.md` if behavior changed
 - make sure `README.md` matches the current behavior
 - review the git diff for accidental changes
 
 ## Notes for future agents
 
-- There is currently no local `tsc` dependency in this repo, so TypeScript validation may not be available unless TypeScript is installed separately.
-- If you change publishable package metadata or release behavior, check `package.json`, `README.md`, and `CHANGELOG.md` together.
+- Use `npm ci --ignore-scripts` to install the pinned development dependencies. Run `npm run typecheck`, `npm test`, and `npm run pack:check` before pushing.
+- Dependabot checks for Pi updates weekly. Keep the development version and lockfile pinned, and review the minimum supported Pi version before using newer APIs or CLI flags.
+- If you change publishable package metadata or release behavior, check `package.json`, `package-lock.json`, `README.md`, and `CHANGELOG.md` together.

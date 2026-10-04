@@ -1,5 +1,6 @@
-import type { ExtensionAPI, ToolResultEvent } from "@earendil-works/pi-coding-agent";
+import type { AgentEndEvent, ExtensionAPI, ExtensionContext, ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import {
+	getAgentDir,
 	isBashToolResult,
 	isEditToolResult,
 	isFindToolResult,
@@ -8,16 +9,14 @@ import {
 	isWriteToolResult,
 } from "@earendil-works/pi-coding-agent";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 const DEFAULT_THRESHOLD_MS = 15000;
 const DEFAULT_DEBOUNCE_MS = 3000;
 const NOTIFY_TIMEOUT_MS = 5000;
-const DEFAULT_NOTIFY_LEVEL = "all";
+const DEFAULT_NOTIFY_LEVEL = "disabled";
 const DEFAULT_INCLUDE_ASSISTANT_RESPONSE = false;
 const ASSISTANT_RESPONSE_MAX_LENGTH = 500;
-const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 const SETTINGS_SECTION_NAME = "pi-cmux";
 const TOOL_NOTIFICATION_SUBTITLE_PREFIX = "Tool";
 
@@ -25,7 +24,6 @@ type NotifyLevel = "all" | "medium" | "low" | "disabled";
 
 interface RunState {
 	startedAt: number;
-	isPiSubagent: boolean;
 	readFiles: Set<string>;
 	changedFiles: Set<string>;
 	searchCount: number;
@@ -78,7 +76,7 @@ function readPiCmuxNotifyTools(settingsPath: string): Record<string, unknown> {
 	if (notify === undefined) {
 		return {};
 	}
-	if (typeof notify !== "object" || Array.isArray(notify)) {
+	if (notify === null || typeof notify !== "object" || Array.isArray(notify)) {
 		console.warn(`[pi-cmux] Ignoring invalid "${SETTINGS_SECTION_NAME}.notify" settings in ${settingsPath}`);
 		return {};
 	}
@@ -87,7 +85,7 @@ function readPiCmuxNotifyTools(settingsPath: string): Record<string, unknown> {
 	if (tools === undefined) {
 		return {};
 	}
-	if (typeof tools !== "object" || Array.isArray(tools)) {
+	if (tools === null || typeof tools !== "object" || Array.isArray(tools)) {
 		console.warn(`[pi-cmux] Ignoring invalid "${SETTINGS_SECTION_NAME}.notify.tools" settings in ${settingsPath}`);
 		return {};
 	}
@@ -121,7 +119,7 @@ function normalizeToolNotification(
 	}
 
 	const config = value as ToolNotificationInput;
-	if (config.disabled) {
+	if (config.disabled === true) {
 		return null;
 	}
 
@@ -133,7 +131,7 @@ function normalizeToolNotification(
 
 function loadConfiguredNotifyTools(cwd: string): Set<string> {
 	const configuredTools = new Set<string>();
-	const settingsPaths = [GLOBAL_SETTINGS_PATH, join(cwd, ".pi", "settings.json")];
+	const settingsPaths = [join(getAgentDir(), "settings.json"), join(cwd, ".pi", "settings.json")];
 
 	for (const settingsPath of settingsPaths) {
 		const tools = readPiCmuxNotifyTools(settingsPath);
@@ -174,6 +172,17 @@ function getNotifyLevelFromEnv(): NotifyLevel {
 		return value;
 	}
 	return DEFAULT_NOTIFY_LEVEL;
+}
+
+/**
+ * Only notify when this Pi instance actually runs inside a cmux surface.
+ * Headless/embedded runs (SDK, print, JSON, RPC) and plain terminals must stay
+ * silent even though the cmux app (and its socket) is reachable.
+ */
+function canNotifyInContext(ctx: ExtensionContext): boolean {
+	if (process.env.PI_CMUX_NOTIFY_FORCE === "1") return true;
+	if (ctx.mode !== "tui") return false;
+	return Boolean(process.env.CMUX_SURFACE_ID?.trim() || process.env.CMUX_PANEL_ID?.trim());
 }
 
 function pluralize(count: number, singular: string, plural: string = `${singular}s`): string {
@@ -342,22 +351,9 @@ function shouldNotify(level: NotifyLevel, subtitle: string): boolean {
 	return true;
 }
 
-function shouldNotifyToolStart(level: NotifyLevel): boolean {
-	return level !== "disabled";
-}
-
-function isPiSubagentSystemPrompt(systemPrompt: string): boolean {
-	const hasActiveAgentTag = /<active_agent\b[^>]*\bname=(["'])[^"']+\1[^>]*\/?>/i.test(systemPrompt);
-	const hasSubagentContext = systemPrompt.includes("<sub_agent_context>");
-	const hasSubagentWording = /pi coding agent sub-agent/i.test(systemPrompt) ||
-		/operating as a sub-agent/i.test(systemPrompt);
-	return (hasActiveAgentTag && hasSubagentContext) || hasSubagentWording;
-}
-
-function createEmptyRunState(isPiSubagent = false): RunState {
+function createEmptyRunState(): RunState {
 	return {
 		startedAt: Date.now(),
-		isPiSubagent,
 		readFiles: new Set<string>(),
 		changedFiles: new Set<string>(),
 		searchCount: 0,
@@ -372,10 +368,11 @@ export default function cmuxNotifyExtension(pi: ExtensionAPI) {
 	const notifyLevel = getNotifyLevelFromEnv();
 	const includeAssistantResponse = getBooleanFromEnv("PI_CMUX_NOTIFY_INCLUDE_RESPONSE", DEFAULT_INCLUDE_ASSISTANT_RESPONSE);
 	const title = process.env.PI_CMUX_NOTIFY_TITLE || "Pi";
-	const notifyTools = loadConfiguredNotifyTools(process.cwd());
+	let notifyTools = new Set<string>();
 
 	let runState = createEmptyRunState();
-	let pendingIsPiSubagent = false;
+	let logicalRunActive = false;
+	let pendingCompletionMessages: AgentEndEvent["messages"] | undefined;
 	let lastNotificationAt = 0;
 	let lastNotificationKey = "";
 	let cmuxUnavailable = false;
@@ -409,17 +406,21 @@ export default function cmuxNotifyExtension(pi: ExtensionAPI) {
 		return { ok: true };
 	};
 
-	pi.on("before_agent_start", async (event) => {
-		pendingIsPiSubagent = isPiSubagentSystemPrompt(event.systemPrompt);
+	pi.on("session_start", async (_event, ctx) => {
+		notifyTools = notifyLevel === "disabled" ? new Set() : loadConfiguredNotifyTools(ctx.cwd);
 	});
 
-	pi.on("agent_start", async () => {
-		runState = createEmptyRunState(pendingIsPiSubagent);
-		pendingIsPiSubagent = false;
+	pi.on("agent_start", async (_event, ctx) => {
+		if (!canNotifyInContext(ctx)) return;
+		if (logicalRunActive) return;
+		logicalRunActive = true;
+		pendingCompletionMessages = undefined;
+		runState = createEmptyRunState();
 	});
 
-	pi.on("tool_execution_start", async (event) => {
-		if (!shouldNotifyToolStart(notifyLevel) || !notifyTools.has(event.toolName)) {
+	pi.on("tool_execution_start", async (event, ctx) => {
+		if (!canNotifyInContext(ctx)) return;
+		if (notifyLevel === "disabled" || !notifyTools.has(event.toolName)) {
 			return;
 		}
 
@@ -429,7 +430,8 @@ export default function cmuxNotifyExtension(pi: ExtensionAPI) {
 		);
 	});
 
-	pi.on("tool_result", async (event) => {
+	pi.on("tool_result", async (event, ctx) => {
+		if (!canNotifyInContext(ctx)) return;
 		if (event.isError && !runState.firstToolError) {
 			runState.firstToolError = summarizeError(event);
 		}
@@ -457,12 +459,19 @@ export default function cmuxNotifyExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("agent_end", async (event) => {
-		if (runState.isPiSubagent) {
-			return;
-		}
+		pendingCompletionMessages = [...event.messages];
+	});
+
+	pi.on("agent_settled", async (_event, ctx) => {
+		if (!canNotifyInContext(ctx)) return;
+		if (!ctx.isIdle() || !pendingCompletionMessages) return;
+
+		const messages = pendingCompletionMessages;
+		pendingCompletionMessages = undefined;
+		logicalRunActive = false;
 
 		const durationMs = Date.now() - runState.startedAt;
-		const runError = summarizeRunError(event.messages, runState.firstToolError);
+		const runError = summarizeRunError(messages, runState.firstToolError);
 		const subtitle = buildSubtitle(Boolean(runError), runState, durationMs, thresholdMs);
 		if (!shouldNotify(notifyLevel, subtitle)) {
 			return;
@@ -470,7 +479,7 @@ export default function cmuxNotifyExtension(pi: ExtensionAPI) {
 		let body = runError || summarizeSuccess(runState, durationMs, thresholdMs);
 
 		if (!runError && includeAssistantResponse) {
-			const responseText = getAssistantResponseText(event.messages);
+			const responseText = getAssistantResponseText(messages);
 			if (responseText) {
 				body = `${body}\n${responseText}`;
 			}

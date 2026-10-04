@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ToolResultEvent } from "@earendil-works/pi-coding-agent";
+import type { AgentEndEvent, ExtensionAPI, ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import {
 	isBashToolResult,
 	isEditToolResult,
@@ -344,15 +344,6 @@ function addTokenTotals(left: TokenTotals, right: TokenTotals): TokenTotals {
 	};
 }
 
-function getSessionTokenTotals(messages: readonly unknown[]): TokenTotals {
-	const totals = createEmptyTokenTotals();
-	for (const message of messages) {
-		if (!isAssistantMessage(message)) continue;
-		addTokenUsage(totals, message.usage);
-	}
-	return totals;
-}
-
 function getBranchTokenTotals(entries: readonly unknown[]): TokenTotals {
 	const totals = createEmptyTokenTotals();
 	for (const entry of entries) {
@@ -445,6 +436,7 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 	}
 
 	const statusKey = getStatusKey();
+	const panelId = process.env.CMUX_SURFACE_ID?.trim() || process.env.CMUX_PANEL_ID?.trim();
 	const source = process.env.PI_CMUX_SIDEBAR_SOURCE?.trim() || "pi";
 	const priority = getNumberFromEnv("PI_CMUX_SIDEBAR_STATUS_PRIORITY", DEFAULT_STATUS_PRIORITY);
 	const thresholdMs = getNumberFromEnv(
@@ -464,6 +456,7 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 
 	let runState = createEmptyRunState();
 	let pendingPrompt: string | undefined;
+	let pendingCompletionMessages: AgentEndEvent["messages"] | undefined;
 	let runSequence = 0;
 	let agentActive = false;
 	let cmuxUnavailable = false;
@@ -524,11 +517,15 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 			style.color,
 			"--priority",
 			String(priority),
+			...(panelId ? ["--panel", panelId] : []),
+			"--pid",
+			String(process.pid),
 		]);
 	};
 
 	const clearStatus = (): void => {
-		enqueueCmux(["clear-status", statusKey]);
+		// Follow the same owner as setStatus if the surface moves to another workspace.
+		enqueueCmux(["clear-status", statusKey, ...(panelId ? ["--panel", panelId] : [])]);
 	};
 
 	const appendLog = (level: LogLevel, message: string): void => {
@@ -605,6 +602,8 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 	pi.on("session_start", async () => {
 		cancelFinalClear();
 		runState = createEmptyRunState();
+		pendingPrompt = undefined;
+		pendingCompletionMessages = undefined;
 		tokenBaseTotals = createEmptyTokenTotals();
 		tokenRunTotals = createEmptyTokenTotals();
 		liveAssistantUsage = undefined;
@@ -620,15 +619,24 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("agent_start", async (_event, ctx) => {
+		cancelFinalClear();
+		activeToolCount = 0;
+
+		if (agentActive) {
+			pendingPrompt = undefined;
+			setStatus("running", "Pi running");
+			setProgress(estimateProgress(runState), "Continuing");
+			return;
+		}
+
 		runSequence += 1;
 		agentActive = true;
-		cancelFinalClear();
+		pendingCompletionMessages = undefined;
 		runState = createEmptyRunState(pendingPrompt);
 		pendingPrompt = undefined;
 		tokenBaseTotals = tokenTrackingEnabled ? getBranchTokenTotals(ctx.sessionManager.getBranch()) : createEmptyTokenTotals();
 		tokenRunTotals = createEmptyTokenTotals();
 		liveAssistantUsage = undefined;
-		activeToolCount = 0;
 		updateLatestTokenSummary(tokenBaseTotals);
 		setStatus("running", "Pi running");
 		setProgress(0.08, "Starting");
@@ -711,16 +719,25 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("agent_end", async (event) => {
+		activeToolCount = 0;
+		pendingCompletionMessages = [...event.messages];
+	});
+
+	pi.on("agent_settled", async (_event, ctx) => {
+		if (!ctx.isIdle() || !pendingCompletionMessages) return;
+
+		const messages = pendingCompletionMessages;
+		pendingCompletionMessages = undefined;
 		agentActive = false;
 		activeToolCount = 0;
+
 		const durationMs = Date.now() - runState.startedAt;
-		const failure = summarizeRunFailure(event.messages, runState.firstToolError);
+		const failure = summarizeRunFailure(messages, runState.firstToolError);
 		const finalState = buildFinalState(failure, runState, durationMs, thresholdMs);
 		const summary = failure?.summary || summarizeSuccess(runState, durationMs, thresholdMs);
 		if (tokenTrackingEnabled) {
-			tokenRunTotals = getSessionTokenTotals(event.messages);
 			liveAssistantUsage = undefined;
-			updateLatestTokenSummary(addTokenTotals(tokenBaseTotals, tokenRunTotals));
+			updateLatestTokenSummary(getCurrentTokenTotals());
 		} else {
 			latestTokenSummary = undefined;
 		}
@@ -755,6 +772,7 @@ export default function cmuxSidebarExtension(pi: ExtensionAPI) {
 	pi.on("session_shutdown", async () => {
 		runSequence += 1;
 		agentActive = false;
+		pendingCompletionMessages = undefined;
 		activeToolCount = 0;
 		cancelFinalClear();
 		clearProgress();

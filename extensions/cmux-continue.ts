@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SessionManager, type ExtensionAPI, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { SessionManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	buildContextualTabTitle,
 	buildPiCommand,
@@ -19,7 +19,9 @@ const TEMPLATE_DIR = join(dirname(fileURLToPath(import.meta.url)), "templates");
 
 const promptTemplateCache = new Map<string, string>();
 
-type ContinueRequest =
+type HandoffSource = Pick<ExtensionContext, "cwd" | "sessionManager">;
+
+export type ContinueRequest =
 	| { mode: "handoff"; note?: string }
 	| { mode: "worktree-create"; branch: string; fromRef?: string; note?: string };
 
@@ -293,27 +295,35 @@ function appendUserMessage(sessionManager: SessionManager, text: string): void {
 	});
 }
 
-function createForkedSameCheckoutSession(ctx: ExtensionCommandContext, summary: string): string | undefined {
+function persistPreparedSession(sessionManager: SessionManager): string | undefined {
+	const sessionFile = sessionManager.getSessionFile();
+	// Pi defers writing user-only sessions until the first assistant response.
+	// The child process needs the seed on disk before it starts.
+	if (sessionFile && !existsSync(sessionFile)) {
+		const entries = [sessionManager.getHeader(), ...sessionManager.getEntries()];
+		writeFileSync(sessionFile, `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`, { flag: "wx", mode: 0o600 });
+	}
+	return sessionFile;
+}
+
+function createForkedSameCheckoutSession(ctx: HandoffSource, summary: string, leafId: string | null): string | undefined {
 	const currentSessionFile = ctx.sessionManager.getSessionFile();
-	const leafId = ctx.sessionManager.getLeafId();
-	if (!currentSessionFile || !leafId) return undefined;
+	if (!currentSessionFile || !existsSync(currentSessionFile) || !leafId) return undefined;
 
-	const currentSession = SessionManager.open(currentSessionFile, ctx.sessionManager.getSessionDir());
-	const branchedSessionFile = currentSession.createBranchedSession(leafId);
-	if (!branchedSessionFile) return undefined;
-
-	const branchedSession = SessionManager.open(branchedSessionFile, ctx.sessionManager.getSessionDir());
-	appendUserMessage(branchedSession, summary);
-	return branchedSessionFile;
+	// Work on a separate manager: branching must never change the source session.
+	const fork = SessionManager.open(currentSessionFile, ctx.sessionManager.getSessionDir());
+	if (!fork.getEntry(leafId) || !fork.createBranchedSession(leafId)) return undefined;
+	appendUserMessage(fork, summary);
+	return persistPreparedSession(fork);
 }
 
 function createSummaryOnlySession(cwd: string, summary: string): string | undefined {
 	const sessionManager = SessionManager.create(cwd);
 	appendUserMessage(sessionManager, summary);
-	return sessionManager.getSessionFile();
+	return persistPreparedSession(sessionManager);
 }
 
-async function buildHandoffContext(pi: ExtensionAPI, ctx: ExtensionCommandContext, note?: string): Promise<HandoffContext> {
+async function buildHandoffContext(pi: ExtensionAPI, ctx: HandoffSource, note?: string): Promise<HandoffContext> {
 	const branchEntries = ctx.sessionManager.getBranch();
 	const repo = await getGitRepoInfo(pi, ctx.cwd);
 	const statusSummary = summarizeGitStatusLines(repo?.statusLines ?? []);
@@ -330,17 +340,16 @@ async function buildHandoffContext(pi: ExtensionAPI, ctx: ExtensionCommandContex
 	};
 }
 
-async function resolveHandoffTarget(
+export async function resolveHandoffTarget(
 	pi: ExtensionAPI,
-	ctx: ExtensionCommandContext,
+	ctx: HandoffSource,
 	request: ContinueRequest,
+	leafId: string | null = ctx.sessionManager.getLeafId(),
 ): Promise<{ ok: true; target: HandoffTarget } | { ok: false; error: string }> {
 	if (request.mode === "handoff") {
 		const context = await buildHandoffContext(pi, ctx, request.note);
-		const expectInheritedHistory = Boolean(context.sourceSessionFile && ctx.sessionManager.getLeafId());
-		const summary = buildHandoffSummary(context, expectInheritedHistory);
-		const forkedSessionFile = createForkedSameCheckoutSession(ctx, summary);
-		const sessionFile = forkedSessionFile || createSummaryOnlySession(ctx.cwd, summary);
+		const forkedSessionFile = createForkedSameCheckoutSession(ctx, buildHandoffSummary(context, true), leafId);
+		const sessionFile = forkedSessionFile || createSummaryOnlySession(ctx.cwd, buildHandoffSummary(context, false));
 		if (!sessionFile) {
 			return { ok: false, error: "Failed to create a handoff session" };
 		}
@@ -386,7 +395,7 @@ async function resolveHandoffTarget(
 
 async function openContinueSplit(
 	pi: ExtensionAPI,
-	ctx: ExtensionCommandContext,
+	ctx: HandoffSource,
 	direction: SplitDirection,
 	request: ContinueRequest,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -395,15 +404,10 @@ async function openContinueSplit(
 		return handoffTarget;
 	}
 
-	return openCommandInNewSplit(
-		pi,
-		direction,
-		buildPiCommand(handoffTarget.target.cwd, {
-			sessionFile: handoffTarget.target.sessionFile,
-			prompt: handoffTarget.target.prompt,
-		}),
-		{ tabTitle: await buildContextualTabTitle(pi, handoffTarget.target.cwd, "Continue", "Continue") },
-	);
+	const { cwd, sessionFile, prompt } = handoffTarget.target;
+	const command = buildPiCommand(cwd, { sessionFile, prompt });
+	const title = await buildContextualTabTitle(pi, cwd, "Continue", "Continue");
+	return openCommandInNewSplit(pi, direction, command, { tabTitle: title });
 }
 
 function registerContinueCommand(
@@ -422,11 +426,12 @@ function registerContinueCommand(
 				return;
 			}
 
+			await ctx.waitForIdle();
 			const result = await openContinueSplit(pi, ctx, direction, parsed.request);
 			if (result.ok) {
 				ctx.ui.notify(successMessage, "info");
 			} else {
-				ctx.ui.notify(`continuation split failed: ${result.error}`, "error");
+				ctx.ui.notify(`continuation failed: ${result.error}`, "error");
 			}
 		},
 	});

@@ -1,6 +1,6 @@
 {
   "name": "pi-cmux",
-  "version": "0.1.16",
+  "version": "0.1.24",
   "description": "Pi package with cmux-powered terminal integrations",
   "author": "Javi Molina",
   "license": "MIT",
@@ -24,12 +24,17 @@
   "bin": {
     "pi-cmux": "install.mjs"
   },
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --allowImportingTsExtensions --skipLibCheck --strict extensions/*.ts",
     "pack:check": "npm pack --dry-run"
   },
   "files": [
     "extensions/",
+    "lib/",
     "docs/",
     "install.mjs",
     "README.md",
@@ -44,10 +49,12 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": ">=0.85.1",
+    "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.75.5",
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "@earendil-works/pi-tui": "0.85.1",
     "typescript": "5.9.3"
   }
 }
